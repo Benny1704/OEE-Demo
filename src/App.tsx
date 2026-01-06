@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   AreaChart, Area, BarChart, Bar, Cell, 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
@@ -6,8 +6,8 @@ import {
 } from 'recharts';
 import { 
   Activity, TrendingUp, TrendingDown, Settings, 
-  Bell, Zap, Shield, Clock, Filter, 
-  LayoutDashboard, Server, Menu, X, MoreHorizontal,
+  Zap, Shield, Clock, Filter, 
+  LayoutDashboard, Server, Menu, X,
   Factory, AlertCircle, RefreshCw, ChevronLeft, Play, Pause
 } from 'lucide-react';
 
@@ -115,7 +115,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       <div className="bg-slate-950/90 border border-slate-800 p-3 rounded-xl shadow-2xl backdrop-blur-md z-50">
         <p className="text-slate-400 text-xs mb-2 font-medium uppercase tracking-wider">{label}</p>
         {payload.map((p: any, index: number) => (
-          <div key={index} className="flex items-center gap-3 mb-1 min-w-[120px]">
+          <div key={index} className="flex items-center gap-3 mb-1 min-w-30">
             <div className="w-2 h-2 rounded-full shadow-[0_0_8px_currentColor]" style={{ color: p.color, backgroundColor: p.color }} />
             <span className="text-slate-300 text-sm font-medium flex-1 capitalize">{p.name}</span>
             <span className="text-white font-mono font-bold">{Number(p.value).toFixed(1)}%</span>
@@ -152,10 +152,10 @@ const MetricCard = ({ title, value, change, icon: Icon, trend, color }: any) => 
 
   return (
     <Card className="relative group hover:border-white/10 transition-all duration-300">
-      <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full bg-gradient-to-br ${colorStyles[color]} blur-3xl opacity-20 group-hover:opacity-40 transition-opacity`} />
+      <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full bg-linear-to-br ${colorStyles[color]} blur-3xl opacity-20 group-hover:opacity-40 transition-opacity`} />
       <div className="p-6 relative z-10">
         <div className="flex justify-between items-start mb-4">
-          <div className={`p-3 rounded-2xl bg-gradient-to-br border border-white/5 ${colorStyles[color]} shadow-lg`}>
+          <div className={`p-3 rounded-2xl bg-linear-to-br border border-white/5 ${colorStyles[color]} shadow-lg`}>
             <Icon className="w-6 h-6 text-white" />
           </div>
           <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${isUp ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border-rose-500/20 text-rose-400'}`}>
@@ -276,7 +276,7 @@ const ExecutiveDashboard = () => {
       </div>
 
       {/* Main Charts Area */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[450px]">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-112.5">
         
         {/* Interactive Trend Chart */}
         <Card className="lg:col-span-2 p-6 flex flex-col">
@@ -395,7 +395,7 @@ const ExecutiveDashboard = () => {
           </div>
           
           {/* Background decoration */}
-          <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-gradient-to-tl from-amber-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-linear-to-tl from-amber-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
         </Card>
       </div>
 
@@ -439,7 +439,7 @@ const SidebarItem = ({ icon: Icon, label, active, onClick }: any) => (
   >
     <Icon className={`w-5 h-5 z-10 ${active ? 'animate-bounce-subtle' : ''}`} />
     <span className="font-semibold text-sm z-10">{label}</span>
-    {active && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] animate-[shimmer_2s_infinite]" />}
+    {active && <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />}
   </button>
 );
 
@@ -448,7 +448,7 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex bg-[#0b0c15] text-slate-200 font-sans custom-scrollbar">
+    <div className="min-h-screen flex bg-background text-slate-200 font-sans custom-scrollbar">
       
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
@@ -456,10 +456,10 @@ export default function App() {
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed lg:sticky top-0 h-screen w-[280px] bg-[#0b0c15] border-r border-white/5 z-50 transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      <aside className={`fixed lg:sticky top-0 h-screen w-70 bg-background border-r border-white/5 z-50 transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="flex flex-col h-full p-6">
           <div className="flex items-center gap-3 mb-10 px-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-600/20 group cursor-pointer hover:scale-110 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-600/20 group cursor-pointer hover:scale-110 transition-transform">
               <Zap className="w-6 h-6 text-white group-hover:rotate-12 transition-transform" fill="currentColor" />
             </div>
             <div>
@@ -479,7 +479,7 @@ export default function App() {
           </nav>
 
           <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-4 flex items-center gap-3 hover:bg-slate-800/50 transition-colors cursor-pointer">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-500 border-2 border-slate-900" />
+            <div className="w-10 h-10 rounded-full bg-linear-to-tr from-emerald-500 to-teal-500 border-2 border-slate-900" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-white truncate">Alex Morgan</p>
               <p className="text-xs text-slate-500 truncate">Plant Manager</p>
@@ -492,7 +492,7 @@ export default function App() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* Top Bar (Mobile Only) */}
-        <div className="lg:hidden h-16 border-b border-white/5 flex items-center justify-between px-4 bg-[#0b0c15]/80 backdrop-blur-md sticky top-0 z-30">
+        <div className="lg:hidden h-16 border-b border-white/5 flex items-center justify-between px-4 bg-background/80 backdrop-blur-md sticky top-0 z-30">
           <button onClick={() => setIsSidebarOpen(true)} className="text-slate-400">
             <Menu className="w-6 h-6" />
           </button>
