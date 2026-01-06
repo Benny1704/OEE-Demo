@@ -8,8 +8,32 @@ import {
   Activity, TrendingUp, TrendingDown, Settings, 
   Zap, Shield, Clock, Filter, 
   LayoutDashboard, Server, Menu, X,
-  Factory, AlertCircle, RefreshCw, ChevronLeft, Play, Pause
+  Factory, AlertCircle, RefreshCw, ChevronLeft, Play, Pause,
+  Sun, Moon
 } from 'lucide-react';
+
+// --- Theme Hook ---
+const useTheme = () => {
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('theme') as 'light' | 'dark' || 'dark';
+    }
+    return 'dark';
+  });
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark');
+    root.classList.add(theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
+  return { theme, toggleTheme };
+};
 
 // --- Types ---
 interface Machine {
@@ -20,7 +44,7 @@ interface Machine {
   availability: number;
   performance: number;
   quality: number;
-  history: number[]; // For sparklines
+  history: number[];
 }
 
 interface TrendPoint {
@@ -38,9 +62,7 @@ interface DowntimeReason {
 }
 
 // --- Data Simulation Hook ---
-// This makes the dashboard feel "alive" by updating data every interval
 const useLiveData = (isLive: boolean) => {
-  // Initial Seed Data
   const initialMachines: Machine[] = [
     { id: 'CNC-01', name: 'Haas VF-2', status: 'critical', oee: 72, availability: 80, performance: 75, quality: 90, history: [70, 72, 71, 74, 72] },
     { id: 'CNC-02', name: 'Mazak Integrex', status: 'warning', oee: 81, availability: 85, performance: 80, quality: 95, history: [80, 82, 81, 80, 81] },
@@ -52,7 +74,6 @@ const useLiveData = (isLive: boolean) => {
 
   const [machines, setMachines] = useState<Machine[]>(initialMachines);
   
-  // Initial Trend Data (Last 12 intervals)
   const [trendData, setTrendData] = useState<TrendPoint[]>(() => 
     Array.from({ length: 12 }, (_, i) => ({
       time: `${10 + i}:00`,
@@ -66,21 +87,16 @@ const useLiveData = (isLive: boolean) => {
     if (!isLive) return;
 
     const interval = setInterval(() => {
-      // 1. Update Machines (Random Fluctuation)
       setMachines(prev => prev.map(m => {
-        const change = (Math.random() - 0.5) * 4; // Fluctuate by +/- 2%
+        const change = (Math.random() - 0.5) * 4;
         const newOee = Math.min(100, Math.max(0, m.oee + change));
         const newHistory = [...m.history.slice(1), newOee];
-        
-        // Auto-update status based on OEE
         let newStatus: Machine['status'] = 'good';
         if (newOee < 70) newStatus = 'critical';
         else if (newOee < 85) newStatus = 'warning';
-
         return { ...m, oee: parseFloat(newOee.toFixed(1)), status: newStatus, history: newHistory };
       }));
 
-      // 2. Update Trend (Shift window)
       setTrendData(prev => {
         const lastTime = parseInt(prev[prev.length - 1].time.split(':')[0]);
         const nextTime = (lastTime + 1) % 24;
@@ -93,7 +109,7 @@ const useLiveData = (isLive: boolean) => {
         return [...prev.slice(1), newPoint];
       });
 
-    }, 2500); // Update every 2.5 seconds
+    }, 2500);
 
     return () => clearInterval(interval);
   }, [isLive]);
@@ -104,7 +120,7 @@ const useLiveData = (isLive: boolean) => {
 // --- Components ---
 
 const Card = ({ children, className = "", onClick }: any) => (
-  <div onClick={onClick} className={`bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-3xl shadow-xl overflow-hidden ${className}`}>
+  <div onClick={onClick} className={`bg-[var(--color-surface)] backdrop-blur-xl border border-[var(--color-border)] rounded-3xl shadow-lg shadow-black/5 overflow-hidden transition-all duration-300 ${className}`}>
     {children}
   </div>
 );
@@ -112,13 +128,13 @@ const Card = ({ children, className = "", onClick }: any) => (
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-slate-950/90 border border-slate-800 p-3 rounded-xl shadow-2xl backdrop-blur-md z-50">
-        <p className="text-slate-400 text-xs mb-2 font-medium uppercase tracking-wider">{label}</p>
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] p-3 rounded-xl shadow-xl backdrop-blur-md z-50">
+        <p className="text-[var(--color-text-muted)] text-xs mb-2 font-medium uppercase tracking-wider">{label}</p>
         {payload.map((p: any, index: number) => (
           <div key={index} className="flex items-center gap-3 mb-1 min-w-30">
             <div className="w-2 h-2 rounded-full shadow-[0_0_8px_currentColor]" style={{ color: p.color, backgroundColor: p.color }} />
-            <span className="text-slate-300 text-sm font-medium flex-1 capitalize">{p.name}</span>
-            <span className="text-white font-mono font-bold">{Number(p.value).toFixed(1)}%</span>
+            <span className="text-[var(--color-text-main)] text-sm font-medium flex-1 capitalize">{p.name}</span>
+            <span className="text-[var(--color-text-main)] font-mono font-bold">{Number(p.value).toFixed(1)}%</span>
           </div>
         ))}
       </div>
@@ -127,7 +143,6 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-// --- Sparkline Component for Cards ---
 const Sparkline = ({ data, color }: { data: number[], color: string }) => {
   const chartData = data.map((val, i) => ({ i, val }));
   return (
@@ -143,28 +158,32 @@ const Sparkline = ({ data, color }: { data: number[], color: string }) => {
 
 const MetricCard = ({ title, value, change, icon: Icon, trend, color }: any) => {
   const isUp = trend === 'up';
+  
+  // Using more standard tailwind colors for better light/dark compatibility
   const colorStyles: any = {
-    blue: "from-blue-500/20 to-blue-600/5 text-blue-400 border-blue-500/20",
-    purple: "from-purple-500/20 to-purple-600/5 text-purple-400 border-purple-500/20",
-    emerald: "from-emerald-500/20 to-emerald-600/5 text-emerald-400 border-emerald-500/20",
-    rose: "from-rose-500/20 to-rose-600/5 text-rose-400 border-rose-500/20",
+    blue: "from-blue-500/10 to-blue-600/5 text-blue-500 border-blue-500/20",
+    purple: "from-purple-500/10 to-purple-600/5 text-purple-500 border-purple-500/20",
+    emerald: "from-emerald-500/10 to-emerald-600/5 text-emerald-500 border-emerald-500/20",
+    rose: "from-rose-500/10 to-rose-600/5 text-rose-500 border-rose-500/20",
   };
 
   return (
-    <Card className="relative group hover:border-white/10 transition-all duration-300">
+    <Card className="relative group hover:border-[var(--color-border)] hover:ring-1 hover:ring-[var(--color-border)]">
+      {/* Glow effect only in dark mode or subtle in light */}
       <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full bg-linear-to-br ${colorStyles[color]} blur-3xl opacity-20 group-hover:opacity-40 transition-opacity`} />
+      
       <div className="p-6 relative z-10">
         <div className="flex justify-between items-start mb-4">
-          <div className={`p-3 rounded-2xl bg-linear-to-br border border-white/5 ${colorStyles[color]} shadow-lg`}>
-            <Icon className="w-6 h-6 text-white" />
+          <div className={`p-3 rounded-2xl bg-linear-to-br border ${colorStyles[color]} shadow-md`}>
+            <Icon className="w-6 h-6" />
           </div>
-          <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${isUp ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border-rose-500/20 text-rose-400'}`}>
+          <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${isUp ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-rose-500/10 border-rose-500/20 text-rose-500'}`}>
             {isUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
             <span>{change}</span>
           </div>
         </div>
-        <h3 className="text-slate-400 text-sm font-medium tracking-wide uppercase">{title}</h3>
-        <p className="text-3xl font-bold text-white tracking-tight mt-1">{value}</p>
+        <h3 className="text-[var(--color-text-muted)] text-sm font-medium tracking-wide uppercase">{title}</h3>
+        <p className="text-3xl font-bold text-[var(--color-text-main)] tracking-tight mt-1">{value}</p>
       </div>
     </Card>
   );
@@ -180,19 +199,19 @@ const MachineCard = ({ machine }: { machine: Machine }) => {
   const config = statusConfig[machine.status];
 
   return (
-    <Card className="hover:scale-[1.02] transition-transform duration-300 cursor-pointer group bg-slate-800/20">
+    <Card className="hover:scale-[1.02] cursor-pointer group hover:shadow-xl">
       {/* Header */}
-      <div className="p-5 border-b border-white/5 flex justify-between items-center">
+      <div className="p-5 border-b border-[var(--color-border)] flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center">
-            <Factory className="w-5 h-5 text-slate-400 group-hover:text-blue-400 transition-colors" />
+          <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-hover)] border border-[var(--color-border)] flex items-center justify-center">
+            <Factory className="w-5 h-5 text-[var(--color-text-muted)] group-hover:text-blue-500 transition-colors" />
           </div>
           <div>
-            <h3 className="font-bold text-white">{machine.name}</h3>
-            <p className="text-xs text-slate-500 font-mono">{machine.id}</p>
+            <h3 className="font-bold text-[var(--color-text-main)]">{machine.name}</h3>
+            <p className="text-xs text-[var(--color-text-muted)] font-mono">{machine.id}</p>
           </div>
         </div>
-        <div className={`relative flex items-center justify-center w-6 h-6 rounded-full border ${config.border} bg-slate-900`}>
+        <div className={`relative flex items-center justify-center w-6 h-6 rounded-full border ${config.border} bg-[var(--color-bg)]`}>
           <div className={`w-2.5 h-2.5 rounded-full ${config.bg} ${config.glow} shadow-[0_0_10px_currentColor] animate-pulse`} />
         </div>
       </div>
@@ -200,19 +219,18 @@ const MachineCard = ({ machine }: { machine: Machine }) => {
       {/* Main Content */}
       <div className="p-5 flex items-center justify-between">
          <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Efficiency</span>
-            <span className="text-3xl font-bold text-white">{machine.oee}%</span>
+            <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider block mb-1">Efficiency</span>
+            <span className="text-3xl font-bold text-[var(--color-text-main)]">{machine.oee}%</span>
          </div>
-         {/* Sparkline for visual trend */}
          <Sparkline data={machine.history} color={config.color} />
       </div>
 
       {/* Footer Metrics */}
       <div className="px-5 pb-5 grid grid-cols-3 gap-2">
         {[{l: 'Availabilty', v: machine.availability}, {l: 'Performance', v: machine.performance}, {l: 'Quality', v: machine.quality}].map((m, i) => (
-           <div key={i} className="text-center p-2 rounded-lg bg-white/5 border border-white/5">
-              <span className="block text-[10px] text-slate-500 font-bold mb-1">{m.l}</span>
-              <span className="text-sm font-bold text-white">{m.v}%</span>
+           <div key={i} className="text-center p-2 rounded-lg bg-[var(--color-surface-hover)] border border-[var(--color-border)]">
+              <span className="block text-[10px] text-[var(--color-text-muted)] font-bold mb-1">{m.l}</span>
+              <span className="text-sm font-bold text-[var(--color-text-main)]">{m.v}%</span>
            </div>
         ))}
       </div>
@@ -222,17 +240,17 @@ const MachineCard = ({ machine }: { machine: Machine }) => {
 
 // --- Interactive Dashboard ---
 
-const ExecutiveDashboard = () => {
+const ExecutiveDashboard = ({ theme }: { theme: 'light' | 'dark' }) => {
   const [isLive, setIsLive] = useState(true);
   const { machines, trendData } = useLiveData(isLive);
   
-  // Trend Chart Interaction State
   const [visibleSeries, setVisibleSeries] = useState({ oee: true, performance: false, quality: false });
-  
-  // Downtime Chart Interaction State
   const [drillDown, setDrillDown] = useState<DowntimeReason | null>(null);
 
-  // Initial Downtime Data
+  // Dynamic colors based on theme
+  const chartGridColor = theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#e2e8f0';
+  const chartTextColor = theme === 'dark' ? '#64748b' : '#94a3b8';
+
   const baseDowntimeData: DowntimeReason[] = [
     { name: 'Tooling', value: 35, fill: '#ef4444', details: [{name: 'Breakage', value: 20}, {name: 'Wear', value: 15}] },
     { name: 'Operator', value: 25, fill: '#f59e0b', details: [{name: 'Break', value: 10}, {name: 'Training', value: 15}] },
@@ -250,15 +268,15 @@ const ExecutiveDashboard = () => {
       {/* Header Actions */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold text-white tracking-tight flex items-center gap-3">
+          <h1 className="text-4xl font-bold text-[var(--color-text-main)] tracking-tight flex items-center gap-3">
              Production Floor 
              {isLive && <span className="flex h-3 w-3 relative"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span></span>}
           </h1>
-          <p className="text-slate-400 mt-2 text-sm font-medium">Real-time monitoring • Shift A • Floor 01</p>
+          <p className="text-[var(--color-text-muted)] mt-2 text-sm font-medium">Real-time monitoring • Shift A • Floor 01</p>
         </div>
         
         <div className="flex gap-3">
-            <button onClick={() => setIsLive(!isLive)} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all border ${isLive ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20' : 'bg-slate-800 border-white/10 text-slate-400 hover:text-white'}`}>
+            <button onClick={() => setIsLive(!isLive)} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all border ${isLive ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20' : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}>
                 {isLive ? <><Pause className="w-4 h-4" /> Live Stream On</> : <><Play className="w-4 h-4" /> Paused</>}
             </button>
             <button className="p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-600/20 transition-all">
@@ -281,8 +299,8 @@ const ExecutiveDashboard = () => {
         {/* Interactive Trend Chart */}
         <Card className="lg:col-span-2 p-6 flex flex-col">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-blue-400" />
+            <h2 className="text-lg font-bold text-[var(--color-text-main)] flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-blue-500" />
               Efficiency Trend
             </h2>
             {/* Custom Legend / Toggles */}
@@ -295,7 +313,7 @@ const ExecutiveDashboard = () => {
                  <button 
                     key={s.key} 
                     onClick={() => toggleSeries(s.key as any)}
-                    className={`flex items-center gap-2 text-xs font-bold px-2 py-1 rounded-lg transition-all ${visibleSeries[s.key as keyof typeof visibleSeries] ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                    className={`flex items-center gap-2 text-xs font-bold px-2 py-1 rounded-lg transition-all ${visibleSeries[s.key as keyof typeof visibleSeries] ? 'bg-[var(--color-surface-hover)] text-[var(--color-text-main)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}
                  >
                     <div className={`w-2 h-2 rounded-full`} style={{ backgroundColor: s.color, opacity: visibleSeries[s.key as keyof typeof visibleSeries] ? 1 : 0.3 }} />
                     {s.label}
@@ -317,9 +335,9 @@ const ExecutiveDashboard = () => {
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                <XAxis dataKey="time" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} tickMargin={10} />
-                <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(val) => `${val}%`} domain={[0, 100]} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} vertical={false} />
+                <XAxis dataKey="time" stroke={chartTextColor} fontSize={11} tickLine={false} axisLine={false} tickMargin={10} />
+                <YAxis stroke={chartTextColor} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(val) => `${val}%`} domain={[0, 100]} />
                 <Tooltip content={<CustomTooltip />} />
                 
                 {visibleSeries.oee && (
@@ -339,21 +357,21 @@ const ExecutiveDashboard = () => {
         {/* Interactive Loss Factors (Drill Down) */}
         <Card className="p-6 flex flex-col relative overflow-hidden">
           <div className="flex justify-between items-center mb-2 z-10">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-amber-400" />
+            <h2 className="text-lg font-bold text-[var(--color-text-main)] flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-amber-500" />
               Loss Factors
             </h2>
             {drillDown && (
                <button 
                  onClick={() => setDrillDown(null)}
-                 className="flex items-center gap-1 text-xs font-bold text-slate-400 hover:text-white bg-slate-800 px-2 py-1 rounded-lg"
+                 className="flex items-center gap-1 text-xs font-bold text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] bg-[var(--color-surface-hover)] px-2 py-1 rounded-lg"
                >
                  <ChevronLeft className="w-3 h-3" /> Back
                </button>
             )}
           </div>
           
-          <p className="text-xs text-slate-400 mb-6 z-10">
+          <p className="text-xs text-[var(--color-text-muted)] mb-6 z-10">
              {drillDown ? `Details for: ${drillDown.name}` : 'Click bar for details'}
           </p>
           
@@ -371,11 +389,11 @@ const ExecutiveDashboard = () => {
                    dataKey="name" 
                    type="category" 
                    width={80} 
-                   tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} 
+                   tick={{ fill: chartTextColor, fontSize: 11, fontWeight: 600 }} 
                    axisLine={false} 
                    tickLine={false} 
                 />
-                <Tooltip cursor={{ fill: '#ffffff05' }} content={<CustomTooltip />} />
+                <Tooltip cursor={{ fill: chartGridColor }} content={<CustomTooltip />} />
                 <Bar 
                   dataKey="value" 
                   radius={[0, 4, 4, 0]} 
@@ -402,16 +420,16 @@ const ExecutiveDashboard = () => {
       {/* Active Machines Grid */}
       <div className="pt-4">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Server className="w-5 h-5 text-indigo-400" />
+          <h2 className="text-xl font-bold text-[var(--color-text-main)] flex items-center gap-2">
+            <Server className="w-5 h-5 text-indigo-500" />
             Active Fleet Status
           </h2>
           
           {/* Mock Notification Feed */}
-          <div className="flex items-center gap-3 bg-slate-900/50 border border-white/5 rounded-full px-4 py-1.5">
+          <div className="flex items-center gap-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-full px-4 py-1.5 shadow-sm">
              <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-             <span className="text-xs text-slate-300">
-               <span className="font-bold text-white">Alert:</span> CNC-01 High Temperature (5m ago)
+             <span className="text-xs text-[var(--color-text-muted)]">
+               <span className="font-bold text-[var(--color-text-main)]">Alert:</span> CNC-01 High Temperature (5m ago)
              </span>
           </div>
         </div>
@@ -434,7 +452,7 @@ const SidebarItem = ({ icon: Icon, label, active, onClick }: any) => (
     className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-200 group relative overflow-hidden ${
       active 
         ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
-        : 'text-slate-400 hover:bg-white/5 hover:text-white'
+        : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-main)]'
     }`}
   >
     <Icon className={`w-5 h-5 z-10 ${active ? 'animate-bounce-subtle' : ''}`} />
@@ -443,12 +461,28 @@ const SidebarItem = ({ icon: Icon, label, active, onClick }: any) => (
   </button>
 );
 
+const ThemeToggle = ({ theme, toggleTheme }: { theme: 'light' | 'dark', toggleTheme: () => void }) => (
+  <button 
+    onClick={toggleTheme}
+    className="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-main)] transition-all duration-200"
+  >
+    <div className="relative w-5 h-5">
+      <Sun className={`absolute inset-0 transition-transform duration-500 ${theme === 'dark' ? 'rotate-90 scale-0' : 'rotate-0 scale-100'}`} />
+      <Moon className={`absolute inset-0 transition-transform duration-500 ${theme === 'light' ? '-rotate-90 scale-0' : 'rotate-0 scale-100'}`} />
+    </div>
+    <span className="font-semibold text-sm">
+      {theme === 'light' ? 'Light Mode' : 'Dark Mode'}
+    </span>
+  </button>
+);
+
 export default function App() {
   const [activePage, setActivePage] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="min-h-screen flex bg-background text-slate-200 font-sans custom-scrollbar">
+    <div className="min-h-screen flex bg-[var(--color-bg)] text-[var(--color-text-main)] font-sans custom-scrollbar transition-colors duration-300">
       
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
@@ -456,17 +490,17 @@ export default function App() {
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed lg:sticky top-0 h-screen w-70 bg-background border-r border-white/5 z-50 transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      <aside className={`fixed lg:sticky top-0 h-screen w-70 bg-[var(--color-bg)] border-r border-[var(--color-border)] z-50 transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="flex flex-col h-full p-6">
           <div className="flex items-center gap-3 mb-10 px-2">
             <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-600/20 group cursor-pointer hover:scale-110 transition-transform">
               <Zap className="w-6 h-6 text-white group-hover:rotate-12 transition-transform" fill="currentColor" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white tracking-tight leading-none">Intelli<span className="text-blue-500">OEE</span></h1>
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Enterprise</span>
+              <h1 className="text-xl font-bold tracking-tight leading-none text-[var(--color-text-main)]">Intelli<span className="text-blue-500">OEE</span></h1>
+              <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Enterprise</span>
             </div>
-            <button onClick={() => setIsSidebarOpen(false)} className="ml-auto lg:hidden text-slate-400">
+            <button onClick={() => setIsSidebarOpen(false)} className="ml-auto lg:hidden text-[var(--color-text-muted)]">
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -475,16 +509,18 @@ export default function App() {
             <SidebarItem icon={LayoutDashboard} label="Dashboard" active={activePage === 'overview'} onClick={() => setActivePage('overview')} />
             <SidebarItem icon={Server} label="Fleet Status" active={activePage === 'fleet'} onClick={() => setActivePage('fleet')} />
             <SidebarItem icon={TrendingUp} label="Analytics" active={activePage === 'analytics'} onClick={() => setActivePage('analytics')} />
+            <div className="my-4 h-px bg-[var(--color-border)] opacity-50" />
+            <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
             <SidebarItem icon={Settings} label="Settings" active={activePage === 'settings'} onClick={() => setActivePage('settings')} />
           </nav>
 
-          <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-4 flex items-center gap-3 hover:bg-slate-800/50 transition-colors cursor-pointer">
-            <div className="w-10 h-10 rounded-full bg-linear-to-tr from-emerald-500 to-teal-500 border-2 border-slate-900" />
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 flex items-center gap-3 hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer shadow-sm">
+            <div className="w-10 h-10 rounded-full bg-linear-to-tr from-emerald-500 to-teal-500 border-2 border-[var(--color-bg)]" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-white truncate">Alex Morgan</p>
-              <p className="text-xs text-slate-500 truncate">Plant Manager</p>
+              <p className="text-sm font-bold text-[var(--color-text-main)] truncate">Alex Morgan</p>
+              <p className="text-xs text-[var(--color-text-muted)] truncate">Plant Manager</p>
             </div>
-            <Settings className="w-4 h-4 text-slate-500 hover:text-white" />
+            <Settings className="w-4 h-4 text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]" />
           </div>
         </div>
       </aside>
@@ -492,24 +528,24 @@ export default function App() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* Top Bar (Mobile Only) */}
-        <div className="lg:hidden h-16 border-b border-white/5 flex items-center justify-between px-4 bg-background/80 backdrop-blur-md sticky top-0 z-30">
-          <button onClick={() => setIsSidebarOpen(true)} className="text-slate-400">
+        <div className="lg:hidden h-16 border-b border-[var(--color-border)] flex items-center justify-between px-4 bg-[var(--color-bg)]/80 backdrop-blur-md sticky top-0 z-30">
+          <button onClick={() => setIsSidebarOpen(true)} className="text-[var(--color-text-muted)]">
             <Menu className="w-6 h-6" />
           </button>
-          <span className="font-bold text-white">Dashboard</span>
+          <span className="font-bold text-[var(--color-text-main)]">Dashboard</span>
           <div className="w-6" />
         </div>
 
         <main className="flex-1 overflow-y-auto p-4 lg:p-10 scroll-smooth">
           <div className="max-w-7xl mx-auto">
-             {activePage === 'overview' && <ExecutiveDashboard />}
+             {activePage === 'overview' && <ExecutiveDashboard theme={theme} />}
              {activePage !== 'overview' && (
-               <div className="flex flex-col items-center justify-center h-[60vh] text-slate-500 animate-fade-in">
-                 <div className="p-6 rounded-full bg-slate-900/50 border border-white/5 mb-4 relative group">
+               <div className="flex flex-col items-center justify-center h-[60vh] text-[var(--color-text-muted)] animate-fade-in">
+                 <div className="p-6 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] mb-4 relative group">
                     <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-xl group-hover:bg-blue-500/30 transition-colors" />
                     <RefreshCw className="w-12 h-12 relative z-10 animate-spin-slow" />
                  </div>
-                 <h2 className="text-xl font-bold text-white mb-1">Module Under Development</h2>
+                 <h2 className="text-xl font-bold text-[var(--color-text-main)] mb-1">Module Under Development</h2>
                  <p>This section is currently being upgraded.</p>
                </div>
              )}
