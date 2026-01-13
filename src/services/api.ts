@@ -7,7 +7,9 @@ import type {
   EquipmentExplanation,
   RecommendationsResponse,
   EquipmentDetailResponse,
-  SensorHistoryAPI
+  SensorHistoryAPI,
+  AlertsResponse,
+  MaintenanceQueueResponse
 } from '../types/api';
 
 export const fetchSystemHealth = async (): Promise<SystemHealth> => {
@@ -118,6 +120,74 @@ export const fetchSensorHistory = async (sensorId: string, hours: number = 24): 
     return await response.json();
   } catch (error) {
     console.error(`Failed to fetch history for ${sensorId}:`, error);
+    throw error;
+  }
+};
+
+export const fetchAlerts = async (
+  stageId?: string, 
+  severity?: 'high' | 'medium' | 'low', 
+  acknowledged: boolean = false
+): Promise<AlertsResponse> => {
+  try {
+    // Build query parameters dynamically
+    const params = new URLSearchParams();
+    if (stageId) params.append('stage', stageId);
+    if (severity) params.append('severity', severity);
+    params.append('acknowledged', String(acknowledged));
+
+    const response = await fetch(`/api/alerts?${params.toString()}`, {
+      method: 'GET',
+      headers: { 'accept': 'application/json' },
+    });
+
+    if (!response.ok) throw new Error(`Alerts API failed: ${response.statusText}`);
+    return await response.json();
+  } catch (error) {
+    console.error(`Failed to fetch alerts:`, error);
+    throw error;
+  }
+};
+
+export const acknowledgeAlert = async (alertId: string): Promise<void> => {
+  try {
+    const response = await fetch(`/api/alerts/${alertId}/acknowledge`, {
+      method: 'POST',
+      headers: { 'accept': 'application/json' },
+      body: '' // Empty body as per curl
+    });
+    if (!response.ok) throw new Error(`Acknowledge failed: ${response.statusText}`);
+  } catch (error) {
+    console.error(`Failed to acknowledge alert ${alertId}:`, error);
+    throw error;
+  }
+};
+
+export const fetchMaintenanceQueue = async (): Promise<MaintenanceQueueResponse> => {
+  try {
+    const response = await fetch('/api/maintenance/queue', {
+      method: 'GET',
+      headers: { 'accept': 'application/json' },
+    });
+    if (!response.ok) throw new Error(`Maintenance Queue API failed: ${response.statusText}`);
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to fetch maintenance queue:', error);
+    throw error;
+  }
+};
+
+export const regeneratePlantData = async (): Promise<{ status: string; message: string }> => {
+  try {
+    const response = await fetch('/api/admin/regenerate', {
+      method: 'POST',
+      headers: { 'accept': 'application/json' },
+      body: '' // Empty body
+    });
+    if (!response.ok) throw new Error(`Regenerate failed: ${response.statusText}`);
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to regenerate data:', error);
     throw error;
   }
 };

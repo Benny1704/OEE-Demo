@@ -166,3 +166,37 @@ export interface SensorHistoryAPI {
   history: SensorHistoryPoint[];
   related_sensors?: RelatedSensor[];
 }
+
+export interface Alert {
+  alert_id: string;
+  timestamp: string;
+  severity: 'low' | 'medium' | 'high';
+  stage: string;
+  stage_name: string;
+  equipment: string;
+  equipment_type: string;
+  message: string;
+  failure_probability: number;
+  acknowledged: boolean;
+}
+
+export interface AlertsResponse {
+  total_count: number;
+  alerts: Alert[];
+}
+
+export interface MaintenanceTask {
+  priority: number;
+  equip_id: string;
+  equipment_name: string;
+  stage: string;
+  stage_name: string;
+  action: string;
+  failure_probability: number;
+  urgency: string; // e.g., 'immediate', 'next_shift', 'planned'
+  estimated_downtime_mins: number;
+}
+
+export interface MaintenanceQueueResponse {
+  queue: MaintenanceTask[];
+}

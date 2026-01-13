@@ -35,6 +35,8 @@ export interface EquipmentSummary {
   failure_probability: number;
   risk_category: string;
   wb_risk_category?: string;
+  type?: string;
+  stage?: string;
 }
 
 export interface Sensor {
