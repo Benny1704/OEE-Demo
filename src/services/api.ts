@@ -6,7 +6,8 @@ import type {
   StageDetailResponse,
   EquipmentExplanation,
   RecommendationsResponse,
-  EquipmentDetailResponse
+  EquipmentDetailResponse,
+  SensorHistoryAPI
 } from '../types/api';
 
 export const fetchSystemHealth = async (): Promise<SystemHealth> => {
@@ -103,6 +104,20 @@ export const fetchEquipmentRecommendations = async (equipId: string): Promise<Re
     return await response.json();
   } catch (error) {
     console.error(`Failed to fetch recommendations for ${equipId}:`, error);
+    throw error;
+  }
+};
+
+export const fetchSensorHistory = async (sensorId: string, hours: number = 24): Promise<SensorHistoryAPI> => {
+  try {
+    const response = await fetch(`/api/sensor/${sensorId}/history?hours=${hours}`, {
+      method: 'GET',
+      headers: { 'accept': 'application/json' },
+    });
+    if (!response.ok) throw new Error(`Sensor History API failed: ${response.statusText}`);
+    return await response.json();
+  } catch (error) {
+    console.error(`Failed to fetch history for ${sensorId}:`, error);
     throw error;
   }
 };

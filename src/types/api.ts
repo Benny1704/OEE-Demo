@@ -135,3 +135,34 @@ export interface RecommendationsResponse {
   equip_id: string;
   recommendations: RecommendationAPI[];
 }
+
+export interface SensorHistoryPoint {
+  timestamp: string;
+  value: number;
+}
+
+export interface RelatedSensor {
+  sensor_id: string;
+  name: string;
+  correlation: number;
+}
+
+export interface SensorHistoryAPI {
+  sensor_id: string;
+  name: string;
+  equipment: string;
+  unit: string;
+  current_value: number;
+  thresholds: {
+    warning: number;
+    alarm: number;
+  };
+  statistics: {
+    min: number;
+    max: number;
+    avg: number;
+    std_dev: number;
+  };
+  history: SensorHistoryPoint[];
+  related_sensors?: RelatedSensor[];
+}

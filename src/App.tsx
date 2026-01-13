@@ -164,7 +164,10 @@ export default function App() {
                 )}
                 
                 {currentView === 'data' && (
-                  <DataView sensor={mockSensorHistory} />
+                  <DataView 
+                    // Use selectedSensor.sensor_id if available, otherwise a default for dev/testing
+                    sensorId={selectedSensor?.sensor_id || 'TUNDISH-002-STEEL_TEMP_C'} 
+                  />
                 )}
              </Suspense>
              
