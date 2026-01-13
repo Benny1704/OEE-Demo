@@ -1,7 +1,9 @@
+// src/App.tsx
 import { useState, Suspense, lazy } from 'react';
 import { Menu, ChevronLeft } from 'lucide-react';
 import { Sidebar } from './components/layout/Sidebar';
 import { useTheme } from './hooks/useTheme';
+// Note: We keep mock imports for fallbacks or non-integrated views (Bronze/Data)
 import { mockPlantData, mockStageData, mockEquipmentData, mockSensorHistory } from './data/mockData';
 import type { Stage, EquipmentSummary, Sensor } from './types';
 
@@ -141,10 +143,29 @@ export default function App() {
 
              {/* Content Views with Suspense */}
              <Suspense fallback={<PageLoader />}>
-                {currentView === 'gold' && <GoldView onStageClick={handleStageClick} />}
-                {currentView === 'silver' && <SilverView stage={mockStageData} onEquipClick={handleEquipmentClick} />}
-                {currentView === 'bronze' && <BronzeView equipment={mockEquipmentData} onSensorClick={handleSensorClick} />}
-                {currentView === 'data' && <DataView sensor={mockSensorHistory} />}
+                {currentView === 'gold' && (
+                  <GoldView onStageClick={handleStageClick} />
+                )}
+                
+                {/* Updated SilverView integration */}
+                {currentView === 'silver' && selectedStage && (
+                  <SilverView 
+                    stageId={selectedStage.stage_id} 
+                    onEquipClick={handleEquipmentClick} 
+                  />
+                )}
+                
+                {currentView === 'bronze' && (
+                  <BronzeView 
+                      // Use the selectedEquipment ID if available, otherwise fallback to mock ID for dev
+                      equipId={selectedEquipment?.equip_id || mockEquipmentData.equip_id} 
+                      onSensorClick={handleSensorClick} 
+                  />
+                )}
+                
+                {currentView === 'data' && (
+                  <DataView sensor={mockSensorHistory} />
+                )}
              </Suspense>
              
           </div>
